@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Minha Playlist</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background: #fafafa;
+            font-family: 'Inter', sans-serif;
+            color: #333;
+        }
+
+        .track-item.active {
+            background-color: #f97316;
+            color: white;
+        }
+
+        .track-item:hover {
+            background-color: #f3f4f6;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 4px;
+            background: #ddd;
+            outline: none;
+            appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            appearance: none;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #f97316;
+            cursor: pointer;
+        }
+
+        /* Indicador visual para botão ativo */
+        .btn-active {
+            color: white !important;
+            background-color: #f97316 !important;
+            box-shadow: 0 0 10px #f97316a0;
+        }
+    </style>
+</head>
+
+<body class="flex flex-col items-center p-6 min-h-screen">
+
+    <h1 class="text-2xl font-semibold mb-6 text-orange-500">🎵 Minha Biblioteca</h1>
+
+    <!-- Barra de busca -->
+    <input id="searchInput" type="text" placeholder="Pesquisar..."
+        class="w-full md:w-1/2 mb-5 p-3 rounded-full border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+
+    <!-- Lista -->
+    <div id="playlist" class="w-full md:w-2/3 bg-white rounded-2xl shadow-md divide-y divide-gray-100 mb-5"></div>
+
+    <!-- Player fixo -->
+    <div class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg p-4">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+
+            <!-- Faixa atual -->
+            <div class="flex flex-col items-center sm:items-start text-center sm:text-left">
+                <span id="currentTitle" class="font-semibold text-gray-800"></span>
+                <small id="status" class="text-gray-500">Pausado</small>
+            </div>
+
+            <!-- Controles -->
+            <div class="flex justify-center items-center space-x-3">
+                <button id="prevBtn" class="text-gray-600 hover:text-orange-500 text-2xl">⏮️</button>
+                <button id="playPauseBtn"
+                    class="text-gray-700 bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-full font-semibold">▶️</button>
+                <button id="nextBtn" class="text-gray-600 hover:text-orange-500 text-2xl">⏭️</button>
+            </div>
+
+            <!-- Extras -->
+            <div class="flex justify-center sm:justify-end space-x-3">
+                <button id="repeatBtn"
+                    class="text-gray-600 hover:text-orange-500 px-3 py-2 rounded-full transition">🔁</button>
+                <button id="playAllBtn" class="text-gray-600 hover:text-orange-500 px-3 py-2 rounded-full transition"
+                    title="Tocar todas as faixas em sequência">🎶</button>
+            </div>
+        </div>
+
+        <!-- Barra de progresso -->
+        <div class="mt-3">
+            <div class="flex justify-between text-xs text-gray-500 mb-1">
+                <span id="currentTime">0:00</span>
+                <span id="totalTime">0:00</span>
+            </div>
+            <input id="progressBar" type="range" min="0" max="100" value="0">
+        </div>
+    </div>
+
+    <audio id="audioPlayer" class="hidden"></audio>
+
+    <script>
+        const textos = [
+            { titulo: "Jack Hannaford", arquivo: "audios/jack_hannaford_natalie_complete_audio.mp3" },
+            { titulo: "The Endless Tale", arquivo: "audios/the_endless_tale_peter_complete_audio.mp3" },
+        ];
+
+        const playlistEl = document.getElementById("playlist");
+        const audio = document.getElementById("audioPlayer");
+        const playPauseBtn = document.getElementById("playPauseBtn");
+        const prevBtn = document.getElementById("prevBtn");
+        const nextBtn = document.getElementById("nextBtn");
+        const repeatBtn = document.getElementById("repeatBtn");
+        const playAllBtn = document.getElementById("playAllBtn");
+        const currentTitle = document.getElementById("currentTitle");
+        const statusEl = document.getElementById("status");
+        const searchInput = document.getElementById("searchInput");
+        const progressBar = document.getElementById("progressBar");
+        const currentTimeEl = document.getElementById("currentTime");
+        const totalTimeEl = document.getElementById("totalTime");
+
+        let currentIndex = 0;
+        let repeatMode = false;
+        let playingAll = false;
+        let durations = {};
+
+        function formatTime(sec) {
+            if (isNaN(sec)) return "0:00";
+            const m = Math.floor(sec / 60);
+            const s = Math.floor(sec % 60);
+            return `${m}:${s.toString().padStart(2, "0")}`;
+        }
+
+        function renderPlaylist(filtro = "") {
+            playlistEl.innerHTML = "";
+            textos
+                .filter(t => t.titulo.toLowerCase().includes(filtro.toLowerCase()))
+                .forEach((t, i) => {
+                    const div = document.createElement("div");
+                    div.className = "track-item flex justify-between items-center p-4 cursor-pointer transition";
+                    div.innerHTML = `
+            <span>${t.titulo}</span>
+            <small class="text-gray-400" id="dur-${i}">--:--</small>
+          `;
+                    div.onclick = () => playTrack(i);
+                    playlistEl.appendChild(div);
+
+                    const tempAudio = new Audio(t.arquivo);
+                    tempAudio.addEventListener("loadedmetadata", () => {
+                        durations[i] = tempAudio.duration;
+                        document.getElementById(`dur-${i}`).textContent = formatTime(tempAudio.duration);
+                    });
+                });
+            updateActiveTrack();
+        }
+
+        function updateActiveTrack() {
+            document.querySelectorAll(".track-item").forEach((el, i) => {
+                el.classList.toggle("active", i === currentIndex);
+            });
+            currentTitle.textContent = textos[currentIndex].titulo;
+        }
+
+        function playTrack(index) {
+            currentIndex = index;
+            audio.src = textos[index].arquivo;
+            audio.play();
+            statusEl.textContent = "Tocando";
+            playPauseBtn.textContent = "⏸️";
+            updateActiveTrack();
+        }
+
+        playPauseBtn.onclick = () => {
+            if (!audio.src) playTrack(currentIndex);
+            else if (audio.paused) {
+                audio.play();
+                statusEl.textContent = "Tocando";
+                playPauseBtn.textContent = "⏸️";
+            } else {
+                audio.pause();
+                statusEl.textContent = "Pausado";
+                playPauseBtn.textContent = "▶️";
+            }
+        };
+
+        prevBtn.onclick = () => {
+            currentIndex = (currentIndex - 1 + textos.length) % textos.length;
+            playTrack(currentIndex);
+        };
+
+        nextBtn.onclick = () => {
+            currentIndex = (currentIndex + 1) % textos.length;
+            playTrack(currentIndex);
+        };
+
+        repeatBtn.onclick = () => {
+            repeatMode = !repeatMode;
+            audio.loop = repeatMode;
+            repeatBtn.classList.toggle("btn-active", repeatMode);
+        };
+
+        playAllBtn.onclick = () => {
+            playingAll = true;
+            playTrack(0);
+            playAllBtn.classList.add("btn-active");
+        };
+
+        audio.addEventListener("timeupdate", () => {
+            const progress = (audio.currentTime / audio.duration) * 100;
+            progressBar.value = progress || 0;
+            currentTimeEl.textContent = formatTime(audio.currentTime);
+            totalTimeEl.textContent = formatTime(audio.duration);
+        });
+
+        progressBar.addEventListener("input", e => {
+            const newTime = (e.target.value / 100) * audio.duration;
+            audio.currentTime = newTime;
+        });
+
+        audio.addEventListener("ended", () => {
+            if (repeatMode) return;
+            if (playingAll && currentIndex < textos.length - 1) {
+                playTrack(currentIndex + 1);
+            } else {
+                playingAll = false;
+                playAllBtn.classList.remove("btn-active");
+                playPauseBtn.textContent = "▶️";
+                statusEl.textContent = "Pausado";
+            }
+        });
+
+        searchInput.addEventListener("input", e => renderPlaylist(e.target.value));
+
+        renderPlaylist();
+    </script>
+</body>
+
+</html>
