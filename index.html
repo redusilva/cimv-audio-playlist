@@ -46,12 +46,29 @@
             background-color: #f97316 !important;
             box-shadow: 0 0 10px #f97316a0;
         }
+
+        #currentTitle {
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        @media (min-width: 640px) {
+            #currentTitle {
+                max-width: 300px;
+            }
+        }
     </style>
 </head>
 
 <body class="flex flex-col items-center p-6 min-h-screen">
 
-    <h1 class="text-2xl font-semibold mb-6 text-orange-500">🎵 Minha Biblioteca</h1>
+    <div class="text-center mb-6">
+        <h1 class="text-2xl font-semibold text-orange-500">🎵 Minha Biblioteca</h1>
+        <p class="text-sm text-gray-600 mt-2">Duração total: <span id="totalPlaylistTime"
+                class="font-semibold">--:--</span></p>
+    </div>
 
     <!-- Barra de busca -->
     <input id="searchInput" type="text" placeholder="Pesquisar..."
@@ -62,15 +79,15 @@
 
     <!-- Player fixo -->
     <div class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg p-4">
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div class="flex flex-col gap-3 md:grid md:grid-cols-3 md:items-center">
 
             <!-- Faixa atual -->
-            <div class="flex flex-col items-center sm:items-start text-center sm:text-left">
+            <div class="flex flex-col items-center md:items-start text-center md:text-left min-w-0">
                 <span id="currentTitle" class="font-semibold text-gray-800"></span>
                 <small id="status" class="text-gray-500">Pausado</small>
             </div>
 
-            <!-- Controles -->
+            <!-- Controles (centralizado) -->
             <div class="flex justify-center items-center space-x-3">
                 <button id="prevBtn" class="text-gray-600 hover:text-orange-500 text-2xl">⏮️</button>
                 <button id="playPauseBtn"
@@ -78,8 +95,8 @@
                 <button id="nextBtn" class="text-gray-600 hover:text-orange-500 text-2xl">⏭️</button>
             </div>
 
-            <!-- Extras -->
-            <div class="flex justify-center sm:justify-end space-x-3">
+            <!-- Extras (alinhado à direita) -->
+            <div class="flex justify-center md:justify-end space-x-3">
                 <button id="repeatBtn"
                     class="text-gray-600 hover:text-orange-500 px-3 py-2 rounded-full transition">🔁</button>
                 <button id="playAllBtn" class="text-gray-600 hover:text-orange-500 px-3 py-2 rounded-full transition"
@@ -105,6 +122,7 @@
             { titulo: "The Endless Tale", arquivo: "audios/the_endless_tale_peter_complete_audio.mp3" },
             { titulo: "Jack and the Beanstalk", arquivo: "audios/jack_and_the_beanstalk_natalie_complete.mp3" },
             { titulo: "Jack and the BeanstalkThe Boy who Flew too High", arquivo: "audios/the_boy_who_flew_too_high_peter_complete_audio.mp3" },
+            { titulo: "The Bell of Atri", arquivo: "audios/the_bell_of_atri_peter_complete_audio.mp3" },
         ];
 
         const playlistEl = document.getElementById("playlist");
@@ -125,12 +143,31 @@
         let repeatMode = false;
         let playingAll = false;
         let durations = {};
+        let totalPlaylistDuration = 0;
 
         function formatTime(sec) {
             if (isNaN(sec)) return "0:00";
             const m = Math.floor(sec / 60);
             const s = Math.floor(sec % 60);
             return `${m}:${s.toString().padStart(2, "0")}`;
+        }
+
+        function updateTotalPlaylistTime() {
+            totalPlaylistDuration = Object.values(durations).reduce((sum, dur) => sum + dur, 0);
+            const hours = Math.floor(totalPlaylistDuration / 3600);
+            const minutes = Math.floor((totalPlaylistDuration % 3600) / 60);
+            const seconds = Math.floor(totalPlaylistDuration % 60);
+
+            let timeStr = "";
+            if (hours > 0) {
+                timeStr = `${hours}h ${minutes}min`;
+            } else if (minutes > 0) {
+                timeStr = `${minutes}min ${seconds}s`;
+            } else {
+                timeStr = `${seconds}s`;
+            }
+
+            document.getElementById("totalPlaylistTime").textContent = timeStr;
         }
 
         function renderPlaylist(filtro = "") {
@@ -151,6 +188,7 @@
                     tempAudio.addEventListener("loadedmetadata", () => {
                         durations[i] = tempAudio.duration;
                         document.getElementById(`dur-${i}`).textContent = formatTime(tempAudio.duration);
+                        updateTotalPlaylistTime();
                     });
                 });
             updateActiveTrack();
