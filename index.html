@@ -26,7 +26,7 @@
             width: 100%;
             height: 6px;
             border-radius: 4px;
-            background: #ddd;
+            background: linear-gradient(to right, #f97316 0%, #f97316 var(--progress, 0%), #ddd var(--progress, 0%), #ddd 100%);
             outline: none;
             appearance: none;
         }
@@ -38,6 +38,15 @@
             border-radius: 50%;
             background: #f97316;
             cursor: pointer;
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #f97316;
+            cursor: pointer;
+            border: none;
         }
 
         /* Indicador visual para botão ativo */
@@ -66,13 +75,11 @@
 
     <div class="text-center mb-6">
         <h1 class="text-2xl font-semibold text-orange-500">🎵 Minha Biblioteca</h1>
-        <p class="text-sm text-gray-600 mt-2">Duração total: <span id="totalPlaylistTime"
-                class="font-semibold">--:--</span></p>
+        <p class="text-sm text-gray-600 mt-2">
+            Duração total: <span id="totalPlaylistTime" class="font-semibold">--:--</span><br>
+            Tempo restante: <span id="remainingPlaylistTime" class="font-semibold">--:--</span>
+        </p>
     </div>
-
-    <!-- Barra de busca -->
-    <input id="searchInput" type="text" placeholder="Pesquisar..."
-        class="w-full md:w-1/2 mb-5 p-3 rounded-full border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
 
     <!-- Lista -->
     <div id="playlist" class="w-full md:w-2/3 bg-white rounded-2xl shadow-md divide-y divide-gray-100 mb-5"></div>
@@ -95,13 +102,8 @@
                 <button id="nextBtn" class="text-gray-600 hover:text-orange-500 text-2xl">⏭️</button>
             </div>
 
-            <!-- Extras (alinhado à direita) -->
-            <div class="flex justify-center md:justify-end space-x-3">
-                <button id="repeatBtn"
-                    class="text-gray-600 hover:text-orange-500 px-3 py-2 rounded-full transition">🔁</button>
-                <button id="playAllBtn" class="text-gray-600 hover:text-orange-500 px-3 py-2 rounded-full transition"
-                    title="Tocar todas as faixas em sequência">🎶</button>
-            </div>
+            <!-- Espaço vazio para manter layout -->
+            <div class="hidden md:block"></div>
         </div>
 
         <!-- Barra de progresso -->
@@ -141,10 +143,9 @@
         const totalTimeEl = document.getElementById("totalTime");
 
         let currentIndex = 0;
-        let repeatMode = false;
-        let playingAll = false;
         let durations = {};
         let totalPlaylistDuration = 0;
+        let playedDuration = 0;
 
         function formatTime(sec) {
             if (isNaN(sec)) return "0:00";
@@ -153,45 +154,56 @@
             return `${m}:${s.toString().padStart(2, "0")}`;
         }
 
-        function updateTotalPlaylistTime() {
-            totalPlaylistDuration = Object.values(durations).reduce((sum, dur) => sum + dur, 0);
-            const hours = Math.floor(totalPlaylistDuration / 3600);
-            const minutes = Math.floor((totalPlaylistDuration % 3600) / 60);
-            const seconds = Math.floor(totalPlaylistDuration % 60);
+        function formatDuration(totalSeconds) {
+            const hours = Math.floor(totalSeconds / 3600);
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
+            const seconds = Math.floor(totalSeconds % 60);
 
-            let timeStr = "";
             if (hours > 0) {
-                timeStr = `${hours}h ${minutes}min`;
+                return `${hours}h ${minutes}min`;
             } else if (minutes > 0) {
-                timeStr = `${minutes}min ${seconds}s`;
+                return `${minutes}min ${seconds}s`;
             } else {
-                timeStr = `${seconds}s`;
+                return `${seconds}s`;
             }
-
-            document.getElementById("totalPlaylistTime").textContent = timeStr;
         }
 
-        function renderPlaylist(filtro = "") {
+        function updateTotalPlaylistTime() {
+            totalPlaylistDuration = Object.values(durations).reduce((sum, dur) => sum + dur, 0);
+            document.getElementById("totalPlaylistTime").textContent = formatDuration(totalPlaylistDuration);
+            updateRemainingTime();
+        }
+
+        function updateRemainingTime() {
+            playedDuration = 0;
+            for (let i = 0; i < currentIndex; i++) {
+                playedDuration += durations[i] || 0;
+            }
+            playedDuration += audio.currentTime || 0;
+
+            const remaining = Math.max(0, totalPlaylistDuration - playedDuration);
+            document.getElementById("remainingPlaylistTime").textContent = formatDuration(remaining);
+        }
+
+        function renderPlaylist() {
             playlistEl.innerHTML = "";
-            textos
-                .filter(t => t.titulo.toLowerCase().includes(filtro.toLowerCase()))
-                .forEach((t, i) => {
-                    const div = document.createElement("div");
-                    div.className = "track-item flex justify-between items-center p-4 cursor-pointer transition";
-                    div.innerHTML = `
+            textos.forEach((t, i) => {
+                const div = document.createElement("div");
+                div.className = "track-item flex justify-between items-center p-4 cursor-pointer transition";
+                div.innerHTML = `
             <span>${t.titulo}</span>
             <small class="text-gray-400" id="dur-${i}">--:--</small>
           `;
-                    div.onclick = () => playTrack(i);
-                    playlistEl.appendChild(div);
+                div.onclick = () => playTrack(i);
+                playlistEl.appendChild(div);
 
-                    const tempAudio = new Audio(t.arquivo);
-                    tempAudio.addEventListener("loadedmetadata", () => {
-                        durations[i] = tempAudio.duration;
-                        document.getElementById(`dur-${i}`).textContent = formatTime(tempAudio.duration);
-                        updateTotalPlaylistTime();
-                    });
+                const tempAudio = new Audio(t.arquivo);
+                tempAudio.addEventListener("loadedmetadata", () => {
+                    durations[i] = tempAudio.duration;
+                    document.getElementById(`dur-${i}`).textContent = formatTime(tempAudio.duration);
+                    updateTotalPlaylistTime();
                 });
+            });
             updateActiveTrack();
         }
 
@@ -209,6 +221,7 @@
             statusEl.textContent = "Tocando";
             playPauseBtn.textContent = "⏸️";
             updateActiveTrack();
+            updateRemainingTime();
         }
 
         playPauseBtn.onclick = () => {
@@ -230,27 +243,21 @@
         };
 
         nextBtn.onclick = () => {
-            currentIndex = (currentIndex + 1) % textos.length;
-            playTrack(currentIndex);
-        };
-
-        repeatBtn.onclick = () => {
-            repeatMode = !repeatMode;
-            audio.loop = repeatMode;
-            repeatBtn.classList.toggle("btn-active", repeatMode);
-        };
-
-        playAllBtn.onclick = () => {
-            playingAll = true;
-            playTrack(0);
-            playAllBtn.classList.add("btn-active");
+            if (currentIndex < textos.length - 1) {
+                playTrack(currentIndex + 1);
+            } else {
+                currentIndex = 0;
+                playTrack(currentIndex);
+            }
         };
 
         audio.addEventListener("timeupdate", () => {
             const progress = (audio.currentTime / audio.duration) * 100;
             progressBar.value = progress || 0;
+            progressBar.style.setProperty('--progress', `${progress}%`);
             currentTimeEl.textContent = formatTime(audio.currentTime);
             totalTimeEl.textContent = formatTime(audio.duration);
+            updateRemainingTime();
         });
 
         progressBar.addEventListener("input", e => {
@@ -259,18 +266,13 @@
         });
 
         audio.addEventListener("ended", () => {
-            if (repeatMode) return;
-            if (playingAll && currentIndex < textos.length - 1) {
+            if (currentIndex < textos.length - 1) {
                 playTrack(currentIndex + 1);
             } else {
-                playingAll = false;
-                playAllBtn.classList.remove("btn-active");
                 playPauseBtn.textContent = "▶️";
                 statusEl.textContent = "Pausado";
             }
         });
-
-        searchInput.addEventListener("input", e => renderPlaylist(e.target.value));
 
         renderPlaylist();
     </script>
