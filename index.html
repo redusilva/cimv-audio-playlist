@@ -224,6 +224,55 @@
             playPauseBtn.textContent = "⏸️";
             updateActiveTrack();
             updateRemainingTime();
+            updateMediaSession();
+        }
+
+        // Media Session API para controles nativos e reprodução em segundo plano
+        function updateMediaSession() {
+            if ('mediaSession' in navigator) {
+                navigator.mediaSession.metadata = new MediaMetadata({
+                    title: textos[currentIndex].titulo,
+                    artist: 'Minha Biblioteca',
+                    album: 'Playlist',
+                    artwork: [
+                        { src: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y="0.9em" font-size="90">🎧</text></svg>', sizes: '96x96', type: 'image/svg+xml' }
+                    ]
+                });
+
+                // Configurar handlers para os controles nativos
+                navigator.mediaSession.setActionHandler('play', () => {
+                    audio.play();
+                    statusEl.textContent = "Tocando";
+                    playPauseBtn.textContent = "⏸️";
+                });
+
+                navigator.mediaSession.setActionHandler('pause', () => {
+                    audio.pause();
+                    statusEl.textContent = "Pausado";
+                    playPauseBtn.textContent = "▶️";
+                });
+
+                navigator.mediaSession.setActionHandler('previoustrack', () => {
+                    currentIndex = (currentIndex - 1 + textos.length) % textos.length;
+                    playTrack(currentIndex);
+                });
+
+                navigator.mediaSession.setActionHandler('nexttrack', () => {
+                    if (currentIndex < textos.length - 1) {
+                        playTrack(currentIndex + 1);
+                    } else {
+                        currentIndex = 0;
+                        playTrack(currentIndex);
+                    }
+                });
+
+                // Atualizar posição da reprodução
+                navigator.mediaSession.setPositionState({
+                    duration: audio.duration || 0,
+                    playbackRate: audio.playbackRate,
+                    position: audio.currentTime || 0
+                });
+            }
         }
 
         playPauseBtn.onclick = () => {
@@ -260,6 +309,19 @@
             currentTimeEl.textContent = formatTime(audio.currentTime);
             totalTimeEl.textContent = formatTime(audio.duration);
             updateRemainingTime();
+
+            // Atualizar posição na Media Session API
+            if ('mediaSession' in navigator && audio.duration) {
+                try {
+                    navigator.mediaSession.setPositionState({
+                        duration: audio.duration,
+                        playbackRate: audio.playbackRate,
+                        position: audio.currentTime
+                    });
+                } catch (e) {
+                    // Ignorar erros se a API não estiver disponível
+                }
+            }
         });
 
         progressBar.addEventListener("input", e => {
@@ -273,6 +335,21 @@
             } else {
                 playPauseBtn.textContent = "▶️";
                 statusEl.textContent = "Pausado";
+            }
+        });
+
+        // Atualizar Media Session quando os metadados do áudio carregarem
+        audio.addEventListener("loadedmetadata", () => {
+            if ('mediaSession' in navigator && audio.duration) {
+                try {
+                    navigator.mediaSession.setPositionState({
+                        duration: audio.duration,
+                        playbackRate: audio.playbackRate,
+                        position: audio.currentTime || 0
+                    });
+                } catch (e) {
+                    // Ignorar erros
+                }
             }
         });
 
