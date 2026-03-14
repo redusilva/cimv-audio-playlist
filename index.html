@@ -149,6 +149,7 @@
         let durations = {};
         let totalPlaylistDuration = 0;
         let playedDuration = 0;
+        let wakeLock = null;
 
         function formatTime(sec) {
             if (isNaN(sec)) return "0:00";
@@ -188,6 +189,40 @@
             document.getElementById("remainingPlaylistTime").textContent = formatDuration(remaining);
         }
 
+        // Wake Lock API para manter a tela ativa
+        async function requestWakeLock() {
+            try {
+                if ('wakeLock' in navigator) {
+                    wakeLock = await navigator.wakeLock.request('screen');
+                    console.log('Wake Lock ativado - tela permanecerá ativa');
+
+                    wakeLock.addEventListener('release', () => {
+                        console.log('Wake Lock liberado');
+                    });
+                }
+            } catch (err) {
+                console.error('Erro ao solicitar Wake Lock:', err);
+            }
+        }
+
+        async function releaseWakeLock() {
+            if (wakeLock !== null) {
+                try {
+                    await wakeLock.release();
+                    wakeLock = null;
+                } catch (err) {
+                    console.error('Erro ao liberar Wake Lock:', err);
+                }
+            }
+        }
+
+        // Reativar wake lock quando o usuário retorna à página
+        document.addEventListener('visibilitychange', async () => {
+            if (document.visibilityState === 'visible' && !audio.paused) {
+                await requestWakeLock();
+            }
+        });
+
         function renderPlaylist() {
             playlistEl.innerHTML = "";
             textos.forEach((t, i) => {
@@ -226,6 +261,7 @@
             updateActiveTrack();
             updateRemainingTime();
             updateMediaSession();
+            requestWakeLock(); // Manter tela ativa
         }
 
         // Media Session API para controles nativos e reprodução em segundo plano
@@ -245,12 +281,14 @@
                     audio.play();
                     statusEl.textContent = "Tocando";
                     playPauseBtn.textContent = "⏸️";
+                    requestWakeLock(); // Manter tela ativa
                 });
 
                 navigator.mediaSession.setActionHandler('pause', () => {
                     audio.pause();
                     statusEl.textContent = "Pausado";
                     playPauseBtn.textContent = "▶️";
+                    releaseWakeLock(); // Permitir que a tela desligue
                 });
 
                 navigator.mediaSession.setActionHandler('previoustrack', () => {
@@ -282,10 +320,12 @@
                 audio.play();
                 statusEl.textContent = "Tocando";
                 playPauseBtn.textContent = "⏸️";
+                requestWakeLock(); // Manter tela ativa
             } else {
                 audio.pause();
                 statusEl.textContent = "Pausado";
                 playPauseBtn.textContent = "▶️";
+                releaseWakeLock(); // Permitir que a tela desligue
             }
         };
 
@@ -336,6 +376,7 @@
             } else {
                 playPauseBtn.textContent = "▶️";
                 statusEl.textContent = "Pausado";
+                releaseWakeLock(); // Permitir que a tela desligue quando terminar
             }
         });
 
