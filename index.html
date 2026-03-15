@@ -82,6 +82,18 @@
             Duração total: <span id="totalPlaylistTime" class="font-semibold">--:--</span><br>
             Tempo restante: <span id="remainingPlaylistTime" class="font-semibold">--:--</span>
         </p>
+        <button id="repeatModeBtn"
+            class="mt-3 px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg font-semibold transition">
+            🔁 Modo Repetição
+        </button>
+        <div id="repeatModeIndicator"
+            class="hidden mt-2 px-4 py-2 bg-purple-100 border-2 border-purple-500 rounded-lg inline-block">
+            <span class="text-purple-700 font-semibold">🔄 Modo Repetição Ativo</span>
+            <button id="exitRepeatModeBtn"
+                class="ml-3 px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-sm">
+                ❌ Sair
+            </button>
+        </div>
     </div>
 
     <!-- Lista -->
@@ -121,6 +133,33 @@
 
     <audio id="audioPlayer" class="hidden"></audio>
 
+    <!-- Modal de Modo Repetição -->
+    <div id="repeatModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-2xl shadow-2xl p-6 max-w-md w-full">
+            <h2 class="text-2xl font-bold text-purple-600 mb-4">🔁 Modo Repetição</h2>
+            <p class="text-gray-600 mb-4">Selecione um áudio e defina quantas vezes quer repeti-lo:</p>
+
+            <label class="block mb-2 text-sm font-semibold text-gray-700">Áudio:</label>
+            <select id="repeatAudioSelect" class="w-full p-2 border border-gray-300 rounded-lg mb-4">
+            </select>
+
+            <label class="block mb-2 text-sm font-semibold text-gray-700">Repetições:</label>
+            <input type="number" id="repeatCount" min="1" value="10"
+                class="w-full p-2 border border-gray-300 rounded-lg mb-6">
+
+            <div class="flex gap-3">
+                <button id="confirmRepeatBtn"
+                    class="flex-1 px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg font-semibold">
+                    ✅ Confirmar
+                </button>
+                <button id="cancelRepeatBtn"
+                    class="flex-1 px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-700 rounded-lg font-semibold">
+                    ❌ Cancelar
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script>
         const textos = [
             { titulo: "The Bell of Atri", arquivo: "audios/the_bell_of_atri_peter_complete_audio.mp3" },
@@ -150,6 +189,9 @@
         let totalPlaylistDuration = 0;
         let playedDuration = 0;
         let wakeLock = null;
+        let isRepeatMode = false;
+        let originalPlaylist = [];
+        let repeatModePlaylist = [];
 
         function formatTime(sec) {
             if (isNaN(sec)) return "0:00";
@@ -225,7 +267,9 @@
 
         function renderPlaylist() {
             playlistEl.innerHTML = "";
-            textos.forEach((t, i) => {
+            const currentPlaylist = isRepeatMode ? repeatModePlaylist : textos;
+
+            currentPlaylist.forEach((t, i) => {
                 const div = document.createElement("div");
                 div.className = "track-item flex justify-between items-center p-4 cursor-pointer transition";
                 div.innerHTML = `
@@ -245,16 +289,104 @@
             updateActiveTrack();
         }
 
+        // Funções do Modo de Repetição
+        function openRepeatModal() {
+            const modal = document.getElementById("repeatModal");
+            const select = document.getElementById("repeatAudioSelect");
+
+            // Preencher o select com os áudios originais
+            select.innerHTML = "";
+            textos.forEach((t, i) => {
+                const option = document.createElement("option");
+                option.value = i;
+                option.textContent = t.titulo;
+                select.appendChild(option);
+            });
+
+            modal.classList.remove("hidden");
+        }
+
+        function closeRepeatModal() {
+            document.getElementById("repeatModal").classList.add("hidden");
+        }
+
+        function activateRepeatMode(audioIndex, repeatCount) {
+            isRepeatMode = true;
+            originalPlaylist = [...textos];
+
+            // Criar playlist com o áudio repetido
+            const selectedAudio = textos[audioIndex];
+            repeatModePlaylist = [];
+            for (let i = 0; i < repeatCount; i++) {
+                repeatModePlaylist.push({
+                    titulo: `${selectedAudio.titulo} (${i + 1}/${repeatCount})`,
+                    arquivo: selectedAudio.arquivo
+                });
+            }
+
+            // Atualizar interface
+            document.getElementById("repeatModeBtn").classList.add("hidden");
+            document.getElementById("repeatModeIndicator").classList.remove("hidden");
+
+            // Resetar e renderizar nova playlist
+            currentIndex = 0;
+            durations = {};
+            renderPlaylist();
+
+            // Opcional: começar a tocar automaticamente
+            if (repeatModePlaylist.length > 0) {
+                playTrack(0);
+            }
+        }
+
+        function exitRepeatMode() {
+            isRepeatMode = false;
+            repeatModePlaylist = [];
+
+            // Atualizar interface
+            document.getElementById("repeatModeBtn").classList.remove("hidden");
+            document.getElementById("repeatModeIndicator").classList.add("hidden");
+
+            // Resetar e renderizar playlist original
+            currentIndex = 0;
+            durations = {};
+            renderPlaylist();
+
+            // Parar o áudio atual
+            audio.pause();
+            audio.src = "";
+            statusEl.textContent = "Pausado";
+            playPauseBtn.textContent = "▶️";
+        }
+
+        // Event Listeners do Modo de Repetição
+        document.getElementById("repeatModeBtn").onclick = openRepeatModal;
+        document.getElementById("exitRepeatModeBtn").onclick = exitRepeatMode;
+        document.getElementById("cancelRepeatBtn").onclick = closeRepeatModal;
+        document.getElementById("confirmRepeatBtn").onclick = () => {
+            const audioIndex = parseInt(document.getElementById("repeatAudioSelect").value);
+            const repeatCount = parseInt(document.getElementById("repeatCount").value);
+
+            if (repeatCount > 0) {
+                activateRepeatMode(audioIndex, repeatCount);
+                closeRepeatModal();
+            } else {
+                alert("Por favor, insira um número válido de repetições.");
+            }
+        };
+
         function updateActiveTrack() {
+            const currentPlaylist = isRepeatMode ? repeatModePlaylist : textos;
             document.querySelectorAll(".track-item").forEach((el, i) => {
                 el.classList.toggle("active", i === currentIndex);
             });
-            currentTitle.textContent = textos[currentIndex].titulo;
+            currentTitle.textContent = currentPlaylist[currentIndex].titulo;
         }
 
         function playTrack(index) {
+            const currentPlaylist = isRepeatMode ? repeatModePlaylist : textos;
             currentIndex = index;
-            audio.src = textos[index].arquivo;
+            audio.src = currentPlaylist[index].arquivo;
             audio.play();
             statusEl.textContent = "Tocando";
             playPauseBtn.textContent = "⏸️";
@@ -266,9 +398,10 @@
 
         // Media Session API para controles nativos e reprodução em segundo plano
         function updateMediaSession() {
+            const currentPlaylist = isRepeatMode ? repeatModePlaylist : textos;
             if ('mediaSession' in navigator) {
                 navigator.mediaSession.metadata = new MediaMetadata({
-                    title: textos[currentIndex].titulo,
+                    title: currentPlaylist[currentIndex].titulo,
                     artist: 'Minha Biblioteca',
                     album: 'Playlist',
                     artwork: [
@@ -292,12 +425,12 @@
                 });
 
                 navigator.mediaSession.setActionHandler('previoustrack', () => {
-                    currentIndex = (currentIndex - 1 + textos.length) % textos.length;
+                    currentIndex = (currentIndex - 1 + currentPlaylist.length) % currentPlaylist.length;
                     playTrack(currentIndex);
                 });
 
                 navigator.mediaSession.setActionHandler('nexttrack', () => {
-                    if (currentIndex < textos.length - 1) {
+                    if (currentIndex < currentPlaylist.length - 1) {
                         playTrack(currentIndex + 1);
                     } else {
                         currentIndex = 0;
@@ -330,12 +463,14 @@
         };
 
         prevBtn.onclick = () => {
-            currentIndex = (currentIndex - 1 + textos.length) % textos.length;
+            const currentPlaylist = isRepeatMode ? repeatModePlaylist : textos;
+            currentIndex = (currentIndex - 1 + currentPlaylist.length) % currentPlaylist.length;
             playTrack(currentIndex);
         };
 
         nextBtn.onclick = () => {
-            if (currentIndex < textos.length - 1) {
+            const currentPlaylist = isRepeatMode ? repeatModePlaylist : textos;
+            if (currentIndex < currentPlaylist.length - 1) {
                 playTrack(currentIndex + 1);
             } else {
                 currentIndex = 0;
@@ -371,7 +506,8 @@
         });
 
         audio.addEventListener("ended", () => {
-            if (currentIndex < textos.length - 1) {
+            const currentPlaylist = isRepeatMode ? repeatModePlaylist : textos;
+            if (currentIndex < currentPlaylist.length - 1) {
                 playTrack(currentIndex + 1);
             } else {
                 playPauseBtn.textContent = "▶️";
