@@ -8,12 +8,61 @@
     <link rel="icon" type="image/svg+xml"
         href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>🎧</text></svg>">
     <title>Minha Playlist</title>
+    <script>
+        if (localStorage.getItem('theme') !== 'light') {
+            document.documentElement.classList.add('dark');
+        }
+    </script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
+        :root {
+            --bg-page:              #fafafa;
+            --bg-surface:           #ffffff;
+            --bg-surface-elevated:  #ffffff;
+            --bg-hover:             #f3f4f6;
+            --text-primary:         #333333;
+            --text-secondary:       #4b5563;
+            --text-muted:           #6b7280;
+            --text-track-dur:       #9ca3af;
+            --border-color:         #e5e7eb;
+            --border-input:         #d1d5db;
+            --divide-color:         #f3f4f6;
+            --progress-track:       #dddddd;
+            --cancel-btn-bg:        #d1d5db;
+            --cancel-btn-hover:     #9ca3af;
+            --cancel-btn-text:      #374151;
+            --repeat-indicator-bg:  #f3e8ff;
+            --repeat-indicator-text:#7e22ce;
+        }
+
+        html.dark {
+            --bg-page:              #1c1c1c;
+            --bg-surface:           #252525;
+            --bg-surface-elevated:  #2e2e2e;
+            --bg-hover:             #323232;
+            --text-primary:         #e8e8e8;
+            --text-secondary:       #a0a0a0;
+            --text-muted:           #a0a0a0;
+            --text-track-dur:       #6b6b6b;
+            --border-color:         #3a3a3a;
+            --border-input:         #3a3a3a;
+            --divide-color:         #3a3a3a;
+            --progress-track:       #3a3a3a;
+            --cancel-btn-bg:        #3a3a3a;
+            --cancel-btn-hover:     #4a4a4a;
+            --cancel-btn-text:      #e8e8e8;
+            --repeat-indicator-bg:  #2e1f3e;
+            --repeat-indicator-text:#c084fc;
+        }
+
+        html {
+            background: var(--bg-page);
+        }
+
         body {
-            background: #fafafa;
+            background: var(--bg-page);
             font-family: 'Inter', sans-serif;
-            color: #333;
+            color: var(--text-primary);
         }
 
         .track-item.active {
@@ -21,15 +70,19 @@
             color: white;
         }
 
-        .track-item:hover {
-            background-color: #f3f4f6;
+        .track-item.active small {
+            color: white;
+        }
+
+        .track-item:hover:not(.active) {
+            background-color: var(--bg-hover);
         }
 
         input[type="range"] {
             width: 100%;
             height: 6px;
             border-radius: 4px;
-            background: linear-gradient(to right, #f97316 0%, #f97316 var(--progress, 0%), #ddd var(--progress, 0%), #ddd 100%);
+            background: linear-gradient(to right, #f97316 0%, #f97316 var(--progress, 0%), var(--progress-track) var(--progress, 0%), var(--progress-track) 100%);
             outline: none;
             appearance: none;
         }
@@ -71,6 +124,86 @@
                 max-width: 300px;
             }
         }
+
+        /* ---- DARK MODE OVERRIDES ---- */
+
+        html.dark #playlist {
+            background-color: var(--bg-surface);
+            border-color: var(--border-color);
+        }
+
+        html.dark #playlist .track-item {
+            border-color: var(--divide-color);
+        }
+
+        html.dark #player-bar {
+            background-color: var(--bg-surface);
+            border-color: var(--border-color);
+        }
+
+        html.dark #currentTitle {
+            color: var(--text-primary);
+        }
+
+        html.dark #status {
+            color: var(--text-muted);
+        }
+
+        html.dark #prevBtn,
+        html.dark #nextBtn {
+            color: var(--text-secondary);
+        }
+
+        html.dark .progress-times {
+            color: var(--text-muted);
+        }
+
+        html.dark #repeatModeIndicator {
+            background-color: var(--repeat-indicator-bg);
+            border-color: #7e22ce;
+        }
+
+        html.dark #repeatModeIndicator span {
+            color: var(--repeat-indicator-text);
+        }
+
+        html.dark #repeatModal > div {
+            background-color: var(--bg-surface-elevated);
+        }
+
+        html.dark #repeatModal p,
+        html.dark #repeatModal label,
+        html.dark #repeatModal h2 {
+            color: var(--text-secondary);
+        }
+
+        html.dark #repeatAudioSelect,
+        html.dark #repeatCount {
+            background-color: var(--bg-surface);
+            border-color: var(--border-input);
+            color: var(--text-primary);
+        }
+
+        html.dark #cancelRepeatBtn {
+            background-color: var(--cancel-btn-bg);
+            color: var(--cancel-btn-text);
+        }
+
+        html.dark #cancelRepeatBtn:hover {
+            background-color: var(--cancel-btn-hover);
+        }
+
+        html.dark .track-item small {
+            color: var(--text-track-dur);
+        }
+
+        html.dark .stats-text {
+            color: var(--text-secondary);
+        }
+
+        html.dark #themeToggleBtn:hover {
+            background-color: var(--bg-hover);
+        }
     </style>
 </head>
 
@@ -78,7 +211,11 @@
 
     <div class="text-center mb-6">
         <h1 class="text-2xl font-semibold text-orange-500">🎵 Minha Biblioteca</h1>
-        <p class="text-sm text-gray-600 mt-2">
+        <button id="themeToggleBtn"
+            aria-label="Alternar modo claro/escuro"
+            class="fixed top-4 right-4 z-10 p-2 rounded-full text-xl transition hover:bg-gray-100"
+            title="Alternar tema">☀️</button>
+        <p class="text-sm text-gray-600 mt-2 stats-text">
             Duração total: <span id="totalPlaylistTime" class="font-semibold">--:--</span><br>
             Tempo restante: <span id="remainingPlaylistTime" class="font-semibold">--:--</span>
         </p>
@@ -100,7 +237,7 @@
     <div id="playlist" class="w-full md:w-2/3 bg-white rounded-2xl shadow-md divide-y divide-gray-100 mb-5"></div>
 
     <!-- Player fixo -->
-    <div class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg p-4">
+    <div id="player-bar" class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg p-4">
         <div class="flex flex-col gap-3 md:grid md:grid-cols-3 md:items-center">
 
             <!-- Faixa atual -->
@@ -123,7 +260,7 @@
 
         <!-- Barra de progresso -->
         <div class="mt-3">
-            <div class="flex justify-between text-xs text-gray-500 mb-1">
+            <div class="flex justify-between text-xs text-gray-500 mb-1 progress-times">
                 <span id="currentTime">0:00</span>
                 <span id="totalTime">0:00</span>
             </div>
@@ -161,6 +298,15 @@
     </div>
 
     <script>
+        function toggleTheme() {
+            const isDark = document.documentElement.classList.toggle('dark');
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+            document.getElementById('themeToggleBtn').textContent = isDark ? '☀️' : '🌙';
+        }
+        document.getElementById('themeToggleBtn').addEventListener('click', toggleTheme);
+        document.getElementById('themeToggleBtn').textContent =
+            document.documentElement.classList.contains('dark') ? '☀️' : '🌙';
+
         const textos = [
             { titulo: "The Bell of Atri", arquivo: "audios/the_bell_of_atri_peter_complete_audio.mp3" },
             { titulo: "Goldilocks and the Three Bears", arquivo: "audios/goldilocks_and_the_three_bears_peter_audio_completo.mp3" },
