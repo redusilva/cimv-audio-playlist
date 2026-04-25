@@ -16,43 +16,43 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         :root {
-            --bg-page:              #fafafa;
-            --bg-surface:           #ffffff;
-            --bg-surface-elevated:  #ffffff;
-            --bg-hover:             #f3f4f6;
-            --text-primary:         #333333;
-            --text-secondary:       #4b5563;
-            --text-muted:           #6b7280;
-            --text-track-dur:       #9ca3af;
-            --border-color:         #e5e7eb;
-            --border-input:         #d1d5db;
-            --divide-color:         #f3f4f6;
-            --progress-track:       #dddddd;
-            --cancel-btn-bg:        #d1d5db;
-            --cancel-btn-hover:     #9ca3af;
-            --cancel-btn-text:      #374151;
-            --repeat-indicator-bg:  #f3e8ff;
-            --repeat-indicator-text:#7e22ce;
+            --bg-page: #fafafa;
+            --bg-surface: #ffffff;
+            --bg-surface-elevated: #ffffff;
+            --bg-hover: #f3f4f6;
+            --text-primary: #333333;
+            --text-secondary: #4b5563;
+            --text-muted: #6b7280;
+            --text-track-dur: #9ca3af;
+            --border-color: #e5e7eb;
+            --border-input: #d1d5db;
+            --divide-color: #f3f4f6;
+            --progress-track: #dddddd;
+            --cancel-btn-bg: #d1d5db;
+            --cancel-btn-hover: #9ca3af;
+            --cancel-btn-text: #374151;
+            --repeat-indicator-bg: #f3e8ff;
+            --repeat-indicator-text: #7e22ce;
         }
 
         html.dark {
-            --bg-page:              #1c1c1c;
-            --bg-surface:           #252525;
-            --bg-surface-elevated:  #2e2e2e;
-            --bg-hover:             #323232;
-            --text-primary:         #e8e8e8;
-            --text-secondary:       #a0a0a0;
-            --text-muted:           #a0a0a0;
-            --text-track-dur:       #6b6b6b;
-            --border-color:         #3a3a3a;
-            --border-input:         #3a3a3a;
-            --divide-color:         #3a3a3a;
-            --progress-track:       #3a3a3a;
-            --cancel-btn-bg:        #3a3a3a;
-            --cancel-btn-hover:     #4a4a4a;
-            --cancel-btn-text:      #e8e8e8;
-            --repeat-indicator-bg:  #2e1f3e;
-            --repeat-indicator-text:#c084fc;
+            --bg-page: #1c1c1c;
+            --bg-surface: #252525;
+            --bg-surface-elevated: #2e2e2e;
+            --bg-hover: #323232;
+            --text-primary: #e8e8e8;
+            --text-secondary: #a0a0a0;
+            --text-muted: #a0a0a0;
+            --text-track-dur: #6b6b6b;
+            --border-color: #3a3a3a;
+            --border-input: #3a3a3a;
+            --divide-color: #3a3a3a;
+            --progress-track: #3a3a3a;
+            --cancel-btn-bg: #3a3a3a;
+            --cancel-btn-hover: #4a4a4a;
+            --cancel-btn-text: #e8e8e8;
+            --repeat-indicator-bg: #2e1f3e;
+            --repeat-indicator-text: #c084fc;
         }
 
         html {
@@ -167,7 +167,7 @@
             color: var(--repeat-indicator-text);
         }
 
-        html.dark #repeatModal > div {
+        html.dark #repeatModal>div {
             background-color: var(--bg-surface-elevated);
         }
 
@@ -211,8 +211,7 @@
 
     <div class="text-center mb-6">
         <h1 class="text-2xl font-semibold text-orange-500">🎵 Minha Biblioteca</h1>
-        <button id="themeToggleBtn"
-            aria-label="Alternar modo claro/escuro"
+        <button id="themeToggleBtn" aria-label="Alternar modo claro/escuro"
             class="fixed top-4 right-4 z-10 p-2 rounded-full text-xl transition hover:bg-gray-100"
             title="Alternar tema">☀️</button>
         <p class="text-sm text-gray-600 mt-2 stats-text">
@@ -315,6 +314,7 @@
             { titulo: "Lost and Found", arquivo: "audios/Lost and Found Peter Complete Audio.mp3" },
             { titulo: "Steve Jobs Commencement Address 001", arquivo: "audios/AUDIO_Steve_Jobs_Commencement_Address_01.mp3" },
             { titulo: "Steve Jobs Commencement Address 002", arquivo: "audios/AUDIO_Steve_Jobs_Commencement_Address_02.mp3" },
+            { titulo: "Steve Jobs Commencement Address 003", arquivo: "audios/AUDIO_Steve_Jobs_Commencement_Address_03.mp3" },
         ];
 
         const playlistEl = document.getElementById("playlist");
